@@ -1,4 +1,6 @@
-set(PROJECT_TEST_FILES test_container.cpp)
+set(PROJECT_TEST_FILES
+    test_contiguous_container.cpp
+    test_container.cpp)
 
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 
