@@ -60,10 +60,10 @@ BOOST_AUTO_TEST_CASE(failure)
     static_assert(not Container<std::stack<int>>);
     static_assert(not Container<std::span<int>>);
 
-    BOOST_TEST((not Container<std::priority_queue<int>>));
-    BOOST_TEST((not Container<std::forward_list<int>>));
-    BOOST_TEST((not Container<std::queue<int>>));
-    BOOST_TEST((not Container<std::stack<int>>));
-    BOOST_TEST((not Container<std::span<int>>));
+    BOOST_TEST(not (Container<std::priority_queue<int>>));
+    BOOST_TEST(not (Container<std::forward_list<int>>));
+    BOOST_TEST(not (Container<std::queue<int>>));
+    BOOST_TEST(not (Container<std::stack<int>>));
+    BOOST_TEST(not (Container<std::span<int>>));
 }
 BOOST_AUTO_TEST_SUITE_END();

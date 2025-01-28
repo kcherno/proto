@@ -16,7 +16,7 @@
 
 using namespace proto::name_requirement;
 
-BOOST_AUTO_TEST_SUITE(container_name_requirement);
+BOOST_AUTO_TEST_SUITE(contiguous_container_name_requirement);
 BOOST_AUTO_TEST_CASE(success)
 {
     static_assert(ContiguousContainer<std::string>);
