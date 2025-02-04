@@ -28,6 +28,8 @@ namespace proto::net
 
 	std::copy_n(message.cbegin(), length, pointer->data());
 
-	return make_icmp_header(data, size, 8, 0);
+	make_icmp_header(data, size, 8, 0);
+
+	return icmp_echo::header_length() + length;
     }
 }

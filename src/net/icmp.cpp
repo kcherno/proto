@@ -46,6 +46,6 @@ namespace proto::net
 	pointer->code(code);
 	pointer->calculate_checksum(size);
 
-	return size;
+	return icmp::header_length();
     }
 }
