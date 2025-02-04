@@ -21,16 +21,26 @@ namespace proto::tool
 	    const_buffer {container}
 	{}
 
-	const void* data() const noexcept
-	{
-	    return const_buffer::data();
-	}
-
 	void* data() noexcept
 	{
 	    using const_this = const mutable_buffer*;
 
 	    return const_cast<void*>(const_cast<const_this>(this)->data());
+	}
+
+	mutable_buffer subbuffer(std::size_t n, std::size_t start = 0) const
+	{
+	    return const_buffer::subbuffer(n, start);
+	}
+
+    private:
+	mutable_buffer(const_buffer buffer) noexcept :
+	    const_buffer {buffer}
+	{}
+
+	const void* data() const noexcept
+	{
+	    return const_buffer::data();
 	}
     };
 }
