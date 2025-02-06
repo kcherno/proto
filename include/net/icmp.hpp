@@ -1,12 +1,22 @@
 #ifndef NET_ICMP_HPP__
 #define NET_ICMP_HPP__
 
+#include <string_view>
+
 #include <cstdint>
 
 #include "tool/mutable_buffer.hpp"
 
 namespace proto::net
 {
+    enum class icmp_type_enumerator {
+	echo_replay   = 0,
+	echo          = 8,
+	time_exceeded = 11
+    };
+
+    std::string_view icmp_type(icmp_type_enumerator) noexcept;
+
     class icmp {
     public:
 	constexpr icmp() noexcept :

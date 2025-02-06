@@ -1,9 +1,25 @@
+#include <string_view>
+
 #include <cstdint>
 
 #include "net/icmp.hpp"
 
 namespace proto::net
 {
+    std::string_view icmp_type(icmp_type_enumerator enumerator) noexcept
+    {
+	using enum icmp_type_enumerator;
+
+	switch (enumerator)
+	{
+	case echo_replay:   return "echo replay message";
+	case echo:          return "echo message";
+	case time_exceeded: return "time exceeded message";
+
+	default: return "unspecified";
+	}
+    }
+
     void icmp::calculate_checksum(std::size_t size) noexcept
     {
 	checksum_ = 0;
