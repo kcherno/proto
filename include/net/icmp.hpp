@@ -9,16 +9,16 @@
 
 namespace proto::net
 {
-    enum class icmp_type_enumerator {
-	echo_replay   = 0,
-	echo          = 8,
-	time_exceeded = 11
-    };
-
-    std::string_view icmp_type(icmp_type_enumerator) noexcept;
-
     class icmp {
     public:
+	enum class type_enumerator {
+	    echo_replay   = 0,
+	    echo          = 8,
+	    time_exceeded = 11
+	};
+
+	static std::string_view to_string(type_enumerator) noexcept;
+
 	constexpr icmp() noexcept :
 	    icmp {0, 0}
 	{}

@@ -15,6 +15,7 @@ extern "C"
 namespace proto::net
 {
     class ipv4 final {
+    public:
 	int version() const noexcept
 	{
 	    return ip.version;

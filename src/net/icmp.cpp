@@ -6,9 +6,9 @@
 
 namespace proto::net
 {
-    std::string_view icmp_type(icmp_type_enumerator enumerator) noexcept
+    std::string_view icmp::to_string(icmp::type_enumerator enumerator) noexcept
     {
-	using enum icmp_type_enumerator;
+	using enum type_enumerator;
 
 	switch (enumerator)
 	{
