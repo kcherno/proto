@@ -1,4 +1,6 @@
-set(PROJECT_TEST_FILES test_icmp_echo.cpp)
+set(PROJECT_TEST_FILES
+    test_icmp_echo.cpp
+    test_icmp.cpp)
 
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 
