@@ -1,4 +1,4 @@
-#include <string_view>
+#include <stdexcept>
 
 #include <cstdint>
 
@@ -6,21 +6,7 @@
 
 namespace proto::net
 {
-    std::string_view icmp::to_string(icmp::type_enumerator enumerator) noexcept
-    {
-	using enum type_enumerator;
-
-	switch (enumerator)
-	{
-	case echo_replay:   return "echo replay message";
-	case echo:          return "echo message";
-	case time_exceeded: return "time exceeded message";
-
-	default: return "unspecified";
-	}
-    }
-
-    void icmp::calculate_checksum(std::size_t size) noexcept
+    void icmp::calculate_checksum(std::size_t header_length) noexcept
     {
 	checksum_ = 0;
 
@@ -28,12 +14,12 @@ namespace proto::net
 
 	auto pointer = reinterpret_cast<const uint16_t*>(this);
 
-	for (; size; size -= 2)
+	for (; header_length; header_length -= 2)
 	{
 	    sum += *pointer++;
 	}
 
-	if (size == 1)
+	if (header_length == 1)
 	{
 	    sum += *reinterpret_cast<const uint8_t*>(pointer);
 	}
@@ -46,14 +32,17 @@ namespace proto::net
 	checksum_ = static_cast<uint16_t>(~sum);
     }
 
-    std::size_t make_icmp_header(void*       data,
-				 std::size_t size,
-				 uint8_t     type,
-				 uint8_t     code) noexcept
+    std::size_t icmp::fill_header(void*       data,
+				  std::size_t size,
+				  types       type,
+				  uint8_t     code)
     {
 	if (size < icmp::header_length())
 	{
-	    return 0;
+	    constexpr auto what =
+		"icmp::fill_header: size < icmp::header_length()";
+
+	    throw std::out_of_range {what};
 	}
 
 	auto pointer = reinterpret_cast<icmp*>(data);

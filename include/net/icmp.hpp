@@ -11,32 +11,28 @@ namespace proto::net
 {
     class icmp {
     public:
-	enum class type_enumerator {
+	enum class types {
 	    echo_replay   = 0,
-	    echo          = 8,
+	    echo_request  = 8,
 	    time_exceeded = 11
 	};
 
-	static std::string_view to_string(type_enumerator) noexcept;
+	constexpr static std::string_view to_string(types) noexcept;
 
-	constexpr icmp() noexcept :
-	    icmp {0, 0}
-	{}
-
-	constexpr icmp(uint8_t type, uint8_t code) noexcept :
-	    type_     {type},
+	constexpr icmp(types type, uint8_t code) noexcept :
+	    type_     {static_cast<uint8_t>(type)},
 	    code_     {code},
 	    checksum_ {0}
 	{}
 
-	constexpr uint8_t type() const noexcept
+	constexpr types type() const noexcept
 	{
-	    return type_;
+	    return types {type_};
 	}
 
-	constexpr void type(uint8_t other) noexcept
+	constexpr void type(types other) noexcept
 	{
-	    type_ = other;
+	    type_ = static_cast<uint8_t>(other);
 	}
 
 	constexpr uint8_t code() const noexcept
@@ -56,19 +52,33 @@ namespace proto::net
 	    return sizeof(icmp);
 	}
 
+	static std::size_t fill_header(void*, std::size_t, types, uint8_t);
+
+	static std::size_t fill_header(tool::mutable_buffer buffer,
+				       types                type,
+				       uint8_t              code)
+	{
+	    return fill_header(buffer.data(), buffer.size(), type, code);
+	}
+
     private:
 	uint8_t  type_;
 	uint8_t  code_;
 	uint16_t checksum_;
     };
 
-    std::size_t make_icmp_header(void*, std::size_t, uint8_t, uint8_t) noexcept;
-
-    inline std::size_t make_icmp_header(tool::mutable_buffer buffer,
-					uint8_t              type,
-					uint8_t              code) noexcept
+    constexpr std::string_view icmp::to_string(icmp::types type) noexcept
     {
-	return make_icmp_header(buffer.data(), buffer.size(), type, code);
+	using enum types;
+
+	switch (type)
+	{
+	case echo_replay:   return "echo replay message";
+	case echo_request:  return "echo message";
+	case time_exceeded: return "time exceeded message";
+
+	default: return "unspecified";
+	}
     }
 }
 
