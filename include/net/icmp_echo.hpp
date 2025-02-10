@@ -45,18 +45,131 @@ namespace proto::net
 	    sequence_number_ = ::htons(other);
 	}
 
-	inline const char* data() const noexcept;
+	inline const uint8_t* data() const noexcept;
 
-	char* data() noexcept
+	uint8_t* data() noexcept
 	{
 	    using const_this = const icmp_echo*;
 
-	    return const_cast<char*>(const_cast<const_this>(this)->data());
+	    return const_cast<uint8_t*>(const_cast<const_this>(this)->data());
 	}
 
 	consteval static std::size_t header_length() noexcept
 	{
 	    return sizeof(icmp_echo);
+	}
+
+	static std::size_t replay(void*,
+				  std::size_t,
+				  uint16_t,
+				  uint16_t,
+				  std::string_view);
+
+	static std::size_t replay(tool::mutable_buffer buffer,
+				  uint16_t             identifier,
+				  uint16_t             sequence_number,
+				  std::string_view     message)
+	{
+	    return replay(buffer.data(),
+			  buffer.size(),
+			  identifier,
+			  sequence_number,
+			  message);
+	}
+
+	static std::string replay(uint16_t             identifier,
+				  uint16_t             sequence_number,
+				  std::string_view     message)
+	{
+	    std::string echo_replay(icmp_echo::header_length() + message.size(), '\0');
+
+	    replay(echo_replay, identifier, sequence_number, message);
+
+	    return echo_replay;
+	}
+
+	static const icmp_echo& representation(const void*, std::size_t);
+
+	static const icmp_echo& representation(tool::const_buffer buffer)
+	{
+	    return representation(buffer.data(), buffer.size());
+	}
+
+	static icmp_echo& representation(void* data, std::size_t size)
+	{
+	    auto const_data = const_cast<const void*>(data);
+
+	    return const_cast<icmp_echo&>(representation(const_data, size));
+	}
+
+	static icmp_echo& representation(tool::mutable_buffer buffer)
+	{
+	    return representation(buffer.data(), buffer.size());
+	}
+
+	static std::size_t request(void*,
+				   std::size_t,
+				   uint16_t,
+				   uint16_t,
+				   std::string_view);
+
+	static std::size_t request(void*       data,
+				   std::size_t size,
+				   uint16_t    identifier,
+				   uint16_t    sequence_number)
+	{
+	    return request(data, size, identifier, sequence_number, "");
+	}
+
+	static std::size_t request(void* data, std::size_t size)
+	{
+	    return request(data, size, 0, 0);
+	}
+
+	static std::size_t request(tool::mutable_buffer buffer,
+				   uint16_t             identifier,
+				   uint16_t             sequence_number,
+				   std::string_view     message)
+	{
+	    return request(buffer.data(),
+			   buffer.size(),
+			   identifier,
+			   sequence_number,
+			   message);
+	}
+
+	static std::size_t request(tool::mutable_buffer buffer,
+				   uint16_t             identifier,
+				   uint16_t             sequence_number)
+	{
+	    return request(buffer, identifier, sequence_number, "");
+	}
+
+	static std::size_t request(tool::mutable_buffer buffer)
+	{
+	    return request(buffer, 0, 0);
+	}
+
+	static std::string request(uint16_t         identifier,
+				   uint16_t         sequence_number,
+				   std::string_view message)
+	{
+	    std::string echo_request(icmp_echo::header_length() + message.size(), '\0');
+
+	    request(echo_request, identifier, sequence_number, message);
+
+	    return echo_request;
+	}
+
+	static std::string request(uint16_t identifier,
+				   uint16_t sequence_number)
+	{
+	    return request(identifier, sequence_number, "");
+	}
+
+	static std::string request()
+	{
+	    return request(uint16_t {}, uint16_t {});
 	}
 
     private:
@@ -66,88 +179,16 @@ namespace proto::net
 
     inline icmp_echo::icmp_echo(uint16_t identifier,
 				uint16_t sequence_number) noexcept :
-	icmp             {8, 0},
+	icmp             {types::echo_request, 0},
 	identifier_      {::htons(identifier)},
 	sequence_number_ {::htons(sequence_number)}
     {
 	calculate_checksum(header_length());
     }
 
-    inline const char* icmp_echo::data() const noexcept
+    inline const uint8_t* icmp_echo::data() const noexcept
     {
-	return reinterpret_cast<const char*>(this) + header_length();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////
-
-    std::size_t make_echo_request(void*,
-				  std::size_t,
-				  uint16_t,
-				  uint16_t,
-				  std::string_view) noexcept;
-
-    inline std::size_t make_echo_request(void*       buffer,
-					 std::size_t size,
-					 uint16_t    identifier,
-					 uint16_t    sequence_number) noexcept
-    {
-	return make_echo_request(buffer, size, identifier, sequence_number, "");
-    }
-
-    inline std::size_t make_echo_request(void* buffer, std::size_t size) noexcept
-    {
-	return make_echo_request(buffer, size, 0, 0);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////
-
-    inline std::size_t make_echo_request(tool::mutable_buffer buffer,
-					 uint16_t             identifier,
-					 uint16_t             sequence_number,
-					 std::string_view     message) noexcept
-    {
-	return make_echo_request(buffer.data(),
-				 buffer.size(),
-				 identifier,
-				 sequence_number,
-				 message);
-    }
-
-    inline std::size_t make_echo_request(tool::mutable_buffer buffer,
-					 uint16_t             identifier,
-					 uint16_t             sequence_number)
-	noexcept
-    {
-	return make_echo_request(buffer, identifier, sequence_number, "");
-    }
-
-    inline std::size_t make_echo_request(tool::mutable_buffer buffer) noexcept
-    {
-	return make_echo_request(buffer, 0, 0);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////
-
-    inline std::string make_echo_request(uint16_t         identifier,
-					 uint16_t         sequence_number,
-					 std::string_view message)
-    {
-	std::string echo_request(icmp_echo::header_length() + message.size(), '\0');
-
-	make_echo_request(echo_request, identifier, sequence_number, message);
-
-	return echo_request;
-    }
-
-    inline std::string make_echo_request(uint16_t identifier,
-					 uint16_t sequence_number)
-    {
-	return make_echo_request(identifier, sequence_number, "");
-    }
-
-    inline std::string make_echo_request()
-    {
-	return make_echo_request(uint16_t {}, uint16_t {});
+	return reinterpret_cast<const uint8_t*>(this) + header_length();
     }
 }
 

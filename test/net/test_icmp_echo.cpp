@@ -1,6 +1,7 @@
 #define BOOST_TEST_MODULE icmp_echo_test
 
 #include <string_view>
+#include <stdexcept>
 #include <string>
 #include <array>
 
@@ -11,109 +12,190 @@
 #include "tool/const_buffer.hpp"
 #include "net/icmp_echo.hpp"
 
-void test_echo_request(proto::tool::const_buffer buffer,
-		       uint16_t                  identifier,
-		       uint16_t                  sequence_number,
-		       std::string_view          message) noexcept
+using namespace proto::net;
+using namespace proto;
+
+std::string_view get_message(const void* data, std::size_t size) noexcept
 {
-    auto pointer =
-	reinterpret_cast<const proto::net::icmp_echo*>(buffer.data());
+    if (size < icmp_echo::header_length())
+    {
+	BOOST_REQUIRE(false);
+    }
 
-    BOOST_CHECK_EQUAL(pointer->type(),            8);
-    BOOST_CHECK_EQUAL(pointer->code(),            0);
-    BOOST_CHECK_EQUAL(pointer->identifier(),      identifier);
-    BOOST_CHECK_EQUAL(pointer->sequence_number(), sequence_number);
+    const auto& icmp_echo = icmp_echo::representation(data, size);
 
-    auto echo_message = std::string_view {
-	pointer->data(),
-	buffer.size() - proto::net::icmp_echo::header_length()
+    return std::string_view {
+	reinterpret_cast<const char*>(icmp_echo.data()),
+	size - icmp_echo::header_length()
     };
-
-    BOOST_CHECK_EQUAL(echo_message, message);
 }
 
-BOOST_AUTO_TEST_SUITE(make_echo_request_test);
+std::string_view get_message(tool::const_buffer buffer) noexcept
+{
+    return get_message(buffer.data(), buffer.size());
+}
 
-BOOST_AUTO_TEST_SUITE(with_reserved_memory);
+BOOST_AUTO_TEST_SUITE(icmp_echo_replay_test);
 BOOST_AUTO_TEST_CASE(success)
 {
-    std::array<char, 32> buffer;
+    std::array<char, icmp_echo::header_length()> buffer;
 
-    auto mutable_buffer = proto::tool::mutable_buffer {
-	buffer.data(),
-	proto::net::icmp_echo::header_length()
-    };
+    auto size = icmp_echo::replay(buffer, 0, 0, "");
 
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer),
-		      proto::net::icmp_echo::header_length());
+    BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
 
-    test_echo_request(mutable_buffer, 0, 0, "");
+    const auto& view_1 = icmp_echo::representation(tool::const_buffer {buffer});
 
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer, 1, 1),
-		      proto::net::icmp_echo::header_length());
+    BOOST_TEST((view_1.type() == icmp::types::echo_replay));
 
-    test_echo_request(mutable_buffer, 1, 1, "");
+    BOOST_CHECK_EQUAL(view_1.code(),               0);
+    BOOST_CHECK_EQUAL(view_1.identifier(),         0);
+    BOOST_CHECK_EQUAL(view_1.sequence_number(),    0);
+    BOOST_CHECK_EQUAL(get_message(buffer).empty(), true);
+
+    size = icmp_echo::replay(buffer, 0, 0, "0123456789");
+
+    BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
+
+    const auto& view_2 = icmp_echo::representation(tool::const_buffer {buffer});
+
+    BOOST_TEST((view_2.type() == icmp::types::echo_replay));
+
+    BOOST_CHECK_EQUAL(view_2.code(),               0);
+    BOOST_CHECK_EQUAL(view_2.identifier(),         0);
+    BOOST_CHECK_EQUAL(view_2.sequence_number(),    0);
+    BOOST_CHECK_EQUAL(get_message(buffer).empty(), true);
+
+    /////////////////////////////////////////////////////////////////////////////////
+
+    auto string_1 = icmp_echo::replay(0, 0, "");
+
+    BOOST_CHECK_EQUAL(string_1.size(), icmp_echo::header_length());
+
+    const auto& view_3 =
+	icmp_echo::representation(tool::const_buffer {string_1});
+
+    BOOST_TEST((view_3.type() == icmp::types::echo_replay));
+
+    BOOST_CHECK_EQUAL(view_3.code(),                 0);
+    BOOST_CHECK_EQUAL(view_3.identifier(),           0);
+    BOOST_CHECK_EQUAL(view_3.sequence_number(),      0);
+    BOOST_CHECK_EQUAL(get_message(string_1).empty(), true);
+
+    auto string_2 = icmp_echo::replay(0, 0, "0123456789");
+
+    BOOST_CHECK_EQUAL(string_2.size(),
+		      icmp_echo::header_length() +
+		      std::string_view("0123456789").size());
+
+    const auto& view_4 =
+	icmp_echo::representation(tool::const_buffer {string_2});
+
+    BOOST_TEST((view_4.type() == icmp::types::echo_replay));
+
+    BOOST_CHECK_EQUAL(view_4.code(),            0);
+    BOOST_CHECK_EQUAL(view_4.identifier(),      0);
+    BOOST_CHECK_EQUAL(view_4.sequence_number(), 0);
+    BOOST_CHECK_EQUAL(get_message(string_2),    "0123456789");
 }
 
 BOOST_AUTO_TEST_CASE(failure)
 {
-    std::array<char, 0>  small_buffer;
-    std::array<char, 8>  medium_buffer;
-    std::array<char, 32> large_buffer;
+    std::array<char, 0> buffer;
 
-    auto mutable_buffer = proto::tool::mutable_buffer {small_buffer};
-
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer), 0);
-
-    mutable_buffer = proto::tool::mutable_buffer {medium_buffer};
-
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer, 65536, 65536),
-		      medium_buffer.size());
-
-    test_echo_request(mutable_buffer, 0, 0, "");
-
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer, -1, -1),
-		      medium_buffer.size());
-
-    test_echo_request(mutable_buffer, 65535, 65535, "");
-
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer,
-						    0,
-						    0,
-						    "0123456789"),
-		      medium_buffer.size());
-
-    test_echo_request(mutable_buffer, 0, 0, "");
-
-    mutable_buffer = proto::tool::mutable_buffer {large_buffer};
-
-    BOOST_CHECK_EQUAL(proto::net::make_echo_request(mutable_buffer,
-						    0,
-						    0,
-						    "abcdefghijklmnopqrstuvwxyz"),
-		      large_buffer.size());
-
-    test_echo_request(mutable_buffer, 0, 0, "abcdefghijklmnopqrstuvwx");
+    BOOST_CHECK_THROW(icmp_echo::replay(buffer, 0, 0, ""), std::out_of_range);
 }
-BOOST_AUTO_TEST_SUITE_END(); // with_reserved_memory
+BOOST_AUTO_TEST_SUITE_END();
 
-BOOST_AUTO_TEST_SUITE(with_dynamic_memory);
+BOOST_AUTO_TEST_SUITE(icmp_echo_representation_test);
 BOOST_AUTO_TEST_CASE(success)
 {
-    std::string echo_request;
+    std::array<char, icmp_echo::header_length()> buffer;
 
-    echo_request = proto::net::make_echo_request();
-
-    test_echo_request(echo_request, 0, 0, "");
-
-    echo_request = proto::net::make_echo_request(1, 1);
-
-    test_echo_request(echo_request, 1, 1, "");
-
-    echo_request = proto::net::make_echo_request(0, 0, "0123456789");
-
-    test_echo_request(echo_request, 0, 0, "0123456789");
+    BOOST_CHECK_NO_THROW(icmp_echo::representation(tool::const_buffer   {buffer}));
+    BOOST_CHECK_NO_THROW(icmp_echo::representation(tool::mutable_buffer {buffer}));
 }
-BOOST_AUTO_TEST_SUITE_END(); // with_dynamic_memory
 
-BOOST_AUTO_TEST_SUITE_END(); // make_echo_request_test
+BOOST_AUTO_TEST_CASE(failure)
+{
+    std::array<char, 0> buffer;
+
+    BOOST_CHECK_THROW(icmp_echo::representation(tool::const_buffer   {buffer}),
+		      std::out_of_range);
+
+    BOOST_CHECK_THROW(icmp_echo::representation(tool::mutable_buffer {buffer}),
+		      std::out_of_range);
+}
+BOOST_AUTO_TEST_SUITE_END();
+
+BOOST_AUTO_TEST_SUITE(icmp_echo_request_test);
+BOOST_AUTO_TEST_CASE(success)
+{
+    std::array<char, icmp_echo::header_length()> buffer;
+
+    auto size = icmp_echo::request(buffer, 0, 0, "");
+
+    BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
+
+    const auto& view_1 = icmp_echo::representation(tool::const_buffer {buffer});
+
+    BOOST_TEST((view_1.type() == icmp::types::echo_request));
+
+    BOOST_CHECK_EQUAL(view_1.code(),               0);
+    BOOST_CHECK_EQUAL(view_1.identifier(),         0);
+    BOOST_CHECK_EQUAL(view_1.sequence_number(),    0);
+    BOOST_CHECK_EQUAL(get_message(buffer).empty(), true);
+
+    size = icmp_echo::request(buffer, 0, 0, "0123456789");
+
+    BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
+
+    const auto& view_2 = icmp_echo::representation(tool::const_buffer {buffer});
+
+    BOOST_TEST((view_2.type() == icmp::types::echo_request));
+
+    BOOST_CHECK_EQUAL(view_2.code(),               0);
+    BOOST_CHECK_EQUAL(view_2.identifier(),         0);
+    BOOST_CHECK_EQUAL(view_2.sequence_number(),    0);
+    BOOST_CHECK_EQUAL(get_message(buffer).empty(), true);
+
+    /////////////////////////////////////////////////////////////////////////////////
+
+    auto string_1 = icmp_echo::request(0, 0, "");
+
+    BOOST_CHECK_EQUAL(string_1.size(), icmp_echo::header_length());
+
+    const auto& view_3 =
+	icmp_echo::representation(tool::const_buffer {string_1});
+
+    BOOST_TEST((view_3.type() == icmp::types::echo_request));
+
+    BOOST_CHECK_EQUAL(view_3.code(),                 0);
+    BOOST_CHECK_EQUAL(view_3.identifier(),           0);
+    BOOST_CHECK_EQUAL(view_3.sequence_number(),      0);
+    BOOST_CHECK_EQUAL(get_message(string_1).empty(), true);
+
+    auto string_2 = icmp_echo::request(0, 0, "0123456789");
+
+    BOOST_CHECK_EQUAL(string_2.size(),
+		      icmp_echo::header_length() +
+		      std::string_view("0123456789").size());
+
+    const auto& view_4 =
+	icmp_echo::representation(tool::const_buffer {string_2});
+
+    BOOST_TEST((view_4.type() == icmp::types::echo_request));
+
+    BOOST_CHECK_EQUAL(view_4.code(),            0);
+    BOOST_CHECK_EQUAL(view_4.identifier(),      0);
+    BOOST_CHECK_EQUAL(view_4.sequence_number(), 0);
+    BOOST_CHECK_EQUAL(get_message(string_2),    "0123456789");
+}
+
+BOOST_AUTO_TEST_CASE(failure)
+{
+    std::array<char, 0> buffer;
+
+    BOOST_CHECK_THROW(icmp_echo::request(buffer, 0, 0, ""), std::out_of_range);
+}
+BOOST_AUTO_TEST_SUITE_END();
