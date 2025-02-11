@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(success)
 {
     std::array<char, icmp_echo::header_length()> buffer;
 
-    auto size = icmp_echo::replay(buffer, 0, 0, "");
+    auto size = icmp_echo::fill_echo_replay(buffer, 0, 0, "");
 
     BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
 
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(view_1.sequence_number(),    0);
     BOOST_CHECK_EQUAL(get_message(buffer).empty(), true);
 
-    size = icmp_echo::replay(buffer, 0, 0, "0123456789");
+    size = icmp_echo::fill_echo_replay(buffer, 0, 0, "0123456789");
 
     BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
 
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(success)
 
     /////////////////////////////////////////////////////////////////////////////////
 
-    auto string_1 = icmp_echo::replay(0, 0, "");
+    auto string_1 = icmp_echo::make_echo_replay(0, 0, "");
 
     BOOST_CHECK_EQUAL(string_1.size(), icmp_echo::header_length());
 
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(view_3.sequence_number(),      0);
     BOOST_CHECK_EQUAL(get_message(string_1).empty(), true);
 
-    auto string_2 = icmp_echo::replay(0, 0, "0123456789");
+    auto string_2 = icmp_echo::make_echo_replay(0, 0, "0123456789");
 
     BOOST_CHECK_EQUAL(string_2.size(),
 		      icmp_echo::header_length() +
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(failure)
 {
     std::array<char, 0> buffer;
 
-    BOOST_CHECK_THROW(icmp_echo::replay(buffer, 0, 0, ""), std::out_of_range);
+    BOOST_CHECK_THROW(icmp_echo::fill_echo_replay(buffer, 0, 0, ""), std::out_of_range);
 }
 BOOST_AUTO_TEST_SUITE_END();
 
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(success)
 {
     std::array<char, icmp_echo::header_length()> buffer;
 
-    auto size = icmp_echo::request(buffer, 0, 0, "");
+    auto size = icmp_echo::fill_echo_request(buffer, 0, 0, "");
 
     BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
 
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(view_1.sequence_number(),    0);
     BOOST_CHECK_EQUAL(get_message(buffer).empty(), true);
 
-    size = icmp_echo::request(buffer, 0, 0, "0123456789");
+    size = icmp_echo::fill_echo_request(buffer, 0, 0, "0123456789");
 
     BOOST_CHECK_EQUAL(size, icmp_echo::header_length());
 
@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(success)
 
     /////////////////////////////////////////////////////////////////////////////////
 
-    auto string_1 = icmp_echo::request(0, 0, "");
+    auto string_1 = icmp_echo::make_echo_request(0, 0, "");
 
     BOOST_CHECK_EQUAL(string_1.size(), icmp_echo::header_length());
 
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(view_3.sequence_number(),      0);
     BOOST_CHECK_EQUAL(get_message(string_1).empty(), true);
 
-    auto string_2 = icmp_echo::request(0, 0, "0123456789");
+    auto string_2 = icmp_echo::make_echo_request(0, 0, "0123456789");
 
     BOOST_CHECK_EQUAL(string_2.size(),
 		      icmp_echo::header_length() +
@@ -196,6 +196,6 @@ BOOST_AUTO_TEST_CASE(failure)
 {
     std::array<char, 0> buffer;
 
-    BOOST_CHECK_THROW(icmp_echo::request(buffer, 0, 0, ""), std::out_of_range);
+    BOOST_CHECK_THROW(icmp_echo::fill_echo_request(buffer, 0, 0, ""), std::out_of_range);
 }
 BOOST_AUTO_TEST_SUITE_END();

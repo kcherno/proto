@@ -12,8 +12,8 @@ namespace
     std::size_t fill_echo_or_replay_request(void*                   data,
 					    std::size_t             size,
 					    proto::net::icmp::types type,
-					    uint16_t                identifier,
-					    uint16_t                sequence_number,
+					    std::uint16_t           identifier,
+					    std::uint16_t           sequence_number,
 					    std::string_view        message)
     {
 	auto pointer = reinterpret_cast<proto::net::icmp_echo*>(data);
@@ -34,16 +34,16 @@ namespace
 
 namespace proto::net
 {
-    std::size_t icmp_echo::replay(void*            data,
-				  std::size_t      size,
-				  uint16_t         identifier,
-				  uint16_t         sequence_number,
-				  std::string_view message)
+    std::size_t icmp_echo::fill_echo_replay(void*            data,
+					    std::size_t      size,
+					    std::uint16_t    identifier,
+					    std::uint16_t    sequence_number,
+					    std::string_view message)
     {
 	if (size < header_length())
 	{
 	    constexpr auto what =
-		"icmp_echo::replay: size < icmp_echo::header_length";
+		"icmp_echo::fill_echo_replay: size < icmp_echo::header_length";
 
 	    throw std::out_of_range {what};
 	}
@@ -69,16 +69,16 @@ namespace proto::net
 	return *reinterpret_cast<const icmp_echo*>(data);
     }
 
-    std::size_t icmp_echo::request(void*            data,
-				   std::size_t      size,
-				   uint16_t         identifier,
-				   uint16_t         sequence_number,
-				   std::string_view message)
+    std::size_t icmp_echo::fill_echo_request(void*            data,
+					     std::size_t      size,
+					     std::uint16_t    identifier,
+					     std::uint16_t    sequence_number,
+					     std::string_view message)
     {
 	if (size < header_length())
 	{
 	    constexpr auto what =
-		"icmp_echo::request: size < icmp_echo::header_length";
+		"icmp_echo::fill_echo_request: size < icmp_echo::header_length";
 
 	    throw std::out_of_range {what};
 	}
