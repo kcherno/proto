@@ -1,7 +1,10 @@
 #ifndef NET_IPV4_HPP__
 #define NET_IPV4_HPP__
 
-#include <cassert>
+#include <string_view>
+#include <stdexcept>
+#include <string>
+
 #include <cstdint>
 
 extern "C"
@@ -12,19 +15,34 @@ extern "C"
 
 }
 
+#include "tool/mutable_buffer.hpp"
+
 namespace proto::net
 {
     class ipv4 final {
     public:
-	int version() const noexcept
+	enum class protocols {
+	    icmp = IPPROTO_ICMP,
+	    tcp  = IPPROTO_TCP,
+	    udp  = IPPROTO_UDP
+	};
+
+	ipv4() noexcept :
+	    ip {}
+	{}
+
+	std::uint8_t version() const noexcept
 	{
 	    return ip.version;
 	}
 
-	void version(int other) noexcept
+	void version(std::uint8_t other)
 	{
-	    assert(other == 4 && "ip header version must be 4");
-	    
+	    if (other != 4)
+	    {
+		throw std::logic_error {"ipv4::version: version must be 4"};
+	    }
+
 	    ip.version = other;
 	}
 
@@ -33,76 +51,246 @@ namespace proto::net
 	    return ip.ihl * 4;
 	}
 
-	void header_length(std::size_t other) noexcept
+	inline void header_length(std::size_t);
+
+	std::uint8_t type_of_service() const noexcept
 	{
-	    assert(other >= 20 && "minimum header length is 20");
-	    assert(other <= 60 && "maximum header length is 60");
-
-	    assert((other % 4  == 0) && "ipv4 header length must be multiple of 4");
-
-	    ip.ihl = other / 4;
+	    return ip.tos;
 	}
 
-	// TODO(#1): type of serves
+	void type_of_service(std::uint8_t other) noexcept
+	{
+	    ip.tos = other;
+	}
 
 	std::size_t total_length() const noexcept
 	{
 	    return ::ntohs(ip.tot_len);
 	}
 
-	void total_length(std::uint16_t other) noexcept
-	{
-	    assert(other >= 20 && "minimum total length is 20");
+	inline void total_length(std::uint16_t);
 
-	    ip.tot_len = ::htons(other);
+	std::uint16_t identifier() const noexcept
+	{
+	    return ::ntohs(ip.id);
 	}
 
-	// TODO(#2): identification, flags, fragment offset
+	void identifier(std::uint16_t other) noexcept
+	{
+	    ip.id = ::htons(other);
+	}
 
-	int time_to_live() const noexcept
+	std::uint8_t flags() const noexcept
+	{
+	    return ::ntohs(ip.frag_off) & 0b111;
+	}
+
+	void flags(std::uint8_t other) noexcept
+	{
+	    ip.frag_off = ::ntohs(ip.frag_off);
+
+	    ip.frag_off |= other;
+
+	    ip.frag_off = ::htons(ip.frag_off);
+	}
+
+	std::uint16_t fragment_offset() const noexcept
+	{
+	    return ::ntohs(ip.frag_off) >> 3;
+	}
+
+	void fragment_offset(std::uint16_t other) noexcept
+	{
+	    const auto flags = this->flags();
+
+	    ip.frag_off  = other << 3;
+
+	    ip.frag_off |= flags;
+
+	    ip.frag_off = ::htons(ip.frag_off);
+	}
+
+	std::uint8_t time_to_live() const noexcept
 	{
 	    return ip.ttl;
 	}
 
-	void time_to_live(std::uint8_t other) noexcept
+	void time_to_live(std::uint8_t other)
 	{
-	    assert(other > 0 && "minimum time to live is 1");
+	    if (other < 1)
+	    {
+		constexpr auto what =
+		    "ipv4::time_to_live: minimum time to live is 1";
+
+		throw std::logic_error {what};
+	    }
 
 	    ip.ttl = other;
 	}
 
-	int protocol() const noexcept
+	protocols protocol() const noexcept
 	{
-	    return ip.protocol;
+	    return protocols {ip.protocol};
 	}
 
-	void protocol(std::uint8_t other) noexcept
+	void protocol(protocols protocol) noexcept
 	{
-	    ip.protocol = other;
+	    ip.protocol = static_cast<std::uint8_t>(protocol);
 	}
 
-	// TODO(#3): checksum, source address, destination address, options
+	void calculate_checksum() noexcept;
 
-	const char* data() const noexcept
+	std::string source_address() const;
+
+	void source_address(std::string_view);
+
+	std::string destination_address() const;
+
+	void destination_address(std::string_view);
+
+	// TODO(#1): options
+
+	const std::uint8_t* data() const noexcept
 	{
-	    return reinterpret_cast<const char*>(this) + header_length();
+	    if (empty())
+	    {
+		return nullptr;
+	    }
+
+	    return reinterpret_cast<const std::uint8_t*>(this) + header_length();
 	}
 
-	char* data() noexcept
+	std::uint8_t* data() noexcept
 	{
 	    using const_this = const ipv4*;
 
-	    return const_cast<char*>(const_cast<const_this>(this)->data());
+	    return const_cast<std::uint8_t*>(const_cast<const_this>(this)->data());
+	}
+
+	bool empty() const noexcept
+	{
+	    return size() == 0;
 	}
 
 	std::size_t size() const noexcept
 	{
+	    if (total_length() < header_length())
+	    {
+		return 0;
+	    }
+
 	    return total_length() - header_length();
+	}
+
+	static std::size_t fill_header(void*,
+				       std::size_t,
+				       std::uint16_t,
+				       std::uint8_t,
+				       protocols,
+				       std::string_view,
+				       std::string_view);
+
+	static std::size_t fill_header(tool::mutable_buffer buffer,
+				       std::uint16_t        identifier,
+				       std::uint8_t         time_to_live,
+				       protocols            protocol,
+				       std::string_view     source_address,
+				       std::string_view     destination_address)
+	{
+	    return fill_header(buffer.data(),
+			       buffer.size(),
+			       identifier,
+			       time_to_live,
+			       protocol,
+			       source_address,
+			       destination_address);
+	}
+
+	static inline std::string make_header(std::uint16_t,
+					      std::uint8_t,
+					      protocols,
+					      std::string_view,
+					      std::string_view);
+
+	consteval static std::size_t minimum_header_length() noexcept
+	{
+	    return 20;
+	}
+
+	static const ipv4& representation(const void*, std::size_t);
+
+	static const ipv4& representation(tool::const_buffer buffer)
+	{
+	    return representation(buffer.data(), buffer.size());
+	}
+
+	static ipv4& representation(void* data, std::size_t size)
+	{
+	    auto const_data = const_cast<const void*>(data);
+
+	    return const_cast<ipv4&>(representation(const_data, size));
+	}
+
+	static ipv4& representation(tool::mutable_buffer buffer)
+	{
+	    return representation(buffer.data(), buffer.size());
 	}
 
     private:
 	::iphdr ip;
     };
+
+    inline void ipv4::header_length(std::size_t size)
+    {
+	if (size < minimum_header_length())
+	{
+	    constexpr auto what =
+		"ipv4::header_length: size < minimum_header_length()";
+
+	    throw std::logic_error {what};
+	}
+
+	if (size % 4)
+	{
+	    constexpr auto what =
+		"ipv4::header_length: size must be multiple of 4";
+
+	    throw std::logic_error {what};
+	}
+
+	ip.ihl = size / 4;
+    }
+
+    inline void ipv4::total_length(std::uint16_t other)
+    {
+	if (other < minimum_header_length())
+	{
+	    constexpr auto what =
+		"ipv4::total_length: minimum total length is 20";
+
+	    throw std::logic_error {what};
+	}
+
+	ip.tot_len = ::htons(other);
+    }
+
+    inline std::string ipv4::make_header(std::uint16_t    identifier,
+					 std::uint8_t     time_to_live,
+					 protocols        protocol,
+					 std::string_view source_address,
+					 std::string_view destination_address)
+    {
+	std::string ip_header(minimum_header_length(), '\0');
+
+	fill_header(ip_header,
+		    identifier,
+		    time_to_live,
+		    protocol,
+		    source_address,
+		    destination_address);
+
+	return ip_header;
+    }
 }
 
 #endif // NET_IPV4_HPP__
