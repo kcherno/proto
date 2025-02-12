@@ -1,6 +1,7 @@
 set(PROJECT_TEST_FILES
     test_icmp_echo.cpp
-    test_icmp.cpp)
+    test_icmp.cpp
+    test_ipv4.cpp)
 
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 
@@ -10,6 +11,7 @@ foreach(TEST_FILE ${PROJECT_TEST_FILES})
     add_executable(${TEST_NAME}
 	${CMAKE_SOURCE_DIR}/src/net/icmp_echo.cpp
 	${CMAKE_SOURCE_DIR}/src/net/icmp.cpp
+	${CMAKE_SOURCE_DIR}/src/net/ipv4.cpp
 	${TEST_FILE})
 
     target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
