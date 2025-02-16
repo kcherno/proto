@@ -3,5 +3,6 @@
 #include "tool/mutable_buffer.hpp"
 #include "tool/const_buffer.hpp"
 #include "net/icmp_echo.hpp"
+#include "net/netdevice.hpp"
 #include "net/icmp.hpp"
 #include "net/ipv4.hpp"

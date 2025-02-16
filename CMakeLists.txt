@@ -11,6 +11,7 @@ add_subdirectory(test)
 
 add_library(proto STATIC
     ${CMAKE_SOURCE_DIR}/src/net/icmp_echo.cpp
+    ${CMAKE_SOURCE_DIR}/src/net/netdevice.cpp
     ${CMAKE_SOURCE_DIR}/src/net/icmp.cpp
     ${CMAKE_SOURCE_DIR}/src/net/ipv4.cpp)
 
