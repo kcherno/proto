@@ -101,4 +101,22 @@ namespace proto::net
 
 	field active_field;
     };
+
+    inline boost::asio::ip::address_v4 host_address_v4()
+    {
+	for (auto netdevices = netdevice::available(); auto&& netdevice : netdevices)
+	{
+	    if (netdevice.is_running() && not netdevice.is_loopback())
+	    {
+		auto address_v4 = netdevice.address_v4();
+
+		if (not address_v4.is_unspecified())
+		{
+		    return address_v4;
+		}
+	    }
+	}
+
+	return boost::asio::ip::address_v4 {};
+    }
 }
