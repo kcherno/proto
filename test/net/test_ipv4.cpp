@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(ipv4.version(),         4);
     BOOST_CHECK_EQUAL(ipv4.header_length(),   ipv4::minimum_header_length());
     BOOST_CHECK_EQUAL(ipv4.type_of_service(), 0);
-    BOOST_CHECK_EQUAL(ipv4.total_length(),    ipv4::minimum_header_length());
+
     BOOST_CHECK_EQUAL(ipv4.identifier(),      12345);
     BOOST_CHECK_EQUAL(ipv4.flags(),           0);
     BOOST_CHECK_EQUAL(ipv4.fragment_offset(), 0);
@@ -37,9 +37,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(ipv4.source_address(),      "192.168.0.0");
     BOOST_CHECK_EQUAL(ipv4.destination_address(), "196.100.0.0");
 
-    BOOST_CHECK_EQUAL(ipv4.data(),  nullptr);
-    BOOST_CHECK_EQUAL(ipv4.empty(), true);
-    BOOST_CHECK_EQUAL(ipv4.size(),  0);
+    BOOST_CHECK_NE(ipv4.data(), nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(failure)
@@ -68,7 +66,7 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(ipv4.version(),         4);
     BOOST_CHECK_EQUAL(ipv4.header_length(),   ipv4::minimum_header_length());
     BOOST_CHECK_EQUAL(ipv4.type_of_service(), 0);
-    BOOST_CHECK_EQUAL(ipv4.total_length(),    ipv4::minimum_header_length());
+
     BOOST_CHECK_EQUAL(ipv4.identifier(),      12345);
     BOOST_CHECK_EQUAL(ipv4.flags(),           0);
     BOOST_CHECK_EQUAL(ipv4.fragment_offset(), 0);
@@ -79,8 +77,6 @@ BOOST_AUTO_TEST_CASE(success)
     BOOST_CHECK_EQUAL(ipv4.source_address(),      "192.168.0.0");
     BOOST_CHECK_EQUAL(ipv4.destination_address(), "196.100.0.0");
 
-    BOOST_CHECK_EQUAL(ipv4.data(),  nullptr);
-    BOOST_CHECK_EQUAL(ipv4.empty(), true);
-    BOOST_CHECK_EQUAL(ipv4.size(),  0);
+    BOOST_CHECK_NE(ipv4.data(), nullptr);
 }
 BOOST_AUTO_TEST_SUITE_END();

@@ -68,8 +68,6 @@ namespace proto::net
 	    return ::ntohs(ip.tot_len);
 	}
 
-	inline void total_length(std::uint16_t);
-
 	std::uint16_t identifier() const noexcept
 	{
 	    return ::ntohs(ip.id);
@@ -138,8 +136,6 @@ namespace proto::net
 	    ip.protocol = static_cast<std::uint8_t>(protocol);
 	}
 
-	void calculate_checksum() noexcept;
-
 	std::string source_address() const;
 
 	void source_address(std::string_view);
@@ -150,36 +146,13 @@ namespace proto::net
 
 	// TODO(#1): options
 
-	const std::uint8_t* data() const noexcept
-	{
-	    if (empty())
-	    {
-		return nullptr;
-	    }
-
-	    return reinterpret_cast<const std::uint8_t*>(this) + header_length();
-	}
+	inline const std::uint8_t* data() const noexcept;
 
 	std::uint8_t* data() noexcept
 	{
 	    using const_this = const ipv4*;
 
 	    return const_cast<std::uint8_t*>(const_cast<const_this>(this)->data());
-	}
-
-	bool empty() const noexcept
-	{
-	    return size() == 0;
-	}
-
-	std::size_t size() const noexcept
-	{
-	    if (total_length() < header_length())
-	    {
-		return 0;
-	    }
-
-	    return total_length() - header_length();
 	}
 
 	static std::size_t fill_header(void*,
@@ -261,17 +234,14 @@ namespace proto::net
 	ip.ihl = size / 4;
     }
 
-    inline void ipv4::total_length(std::uint16_t other)
+    inline const std::uint8_t* ipv4::data() const noexcept
     {
-	if (other < minimum_header_length())
+	if (header_length() >= minimum_header_length())
 	{
-	    constexpr auto what =
-		"ipv4::total_length: minimum total length is 20";
-
-	    throw std::logic_error {what};
+	    return reinterpret_cast<const std::uint8_t*>(this) + header_length();
 	}
 
-	ip.tot_len = ::htons(other);
+	return nullptr;
     }
 
     inline std::string ipv4::make_header(std::uint16_t    identifier,

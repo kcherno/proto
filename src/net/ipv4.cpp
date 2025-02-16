@@ -54,29 +54,6 @@ namespace
 
 namespace proto::net
 {
-    void ipv4::calculate_checksum() noexcept
-    {
-	ip.check = 0;
-
-	std::uint32_t sum = 0;
-
-	auto pointer = reinterpret_cast<const std::uint16_t*>(this);
-
-	auto header_length = this->header_length() / 2;
-
-	for (; header_length; --header_length)
-	{
-	    sum += *pointer++;
-	}
-
-	while (sum >> 16)
-	{
-	    sum = (sum & 0xFFFF) + (sum >> 16);
-	}
-
-	ip.check = static_cast<std::uint16_t>(~sum);
-    }
-
     std::string ipv4::source_address() const
     {
 	std::error_code error;
@@ -158,7 +135,7 @@ namespace proto::net
 	ip_header.version(4);
 	ip_header.header_length(minimum_header_length());
 	ip_header.type_of_service(0);
-	ip_header.total_length(minimum_header_length());
+
 	ip_header.identifier(identifier);
 	ip_header.flags(0);
 	ip_header.fragment_offset(0);
